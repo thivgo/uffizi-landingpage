@@ -1,20 +1,8 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+Plataforma web voltada à gestão e comercialização de produtos e serviços, desenvolvida com foco em eficiência administrativa, escalabilidade e integração com sistemas modernos. O sistema centraliza processos de vendas, controle de usuários, gerenciamento de pedidos e acompanhamento financeiro em um único ambiente seguro e intuitivo.
 
-This contains everything you need to run your app locally.
+A aplicação foi projetada para atender desde pequenos negócios até operações de maior porte, oferecendo painel administrativo completo, organização de dados estruturada, controle de permissões por nível de acesso e suporte à tomada de decisão baseada em informações consolidadas. A arquitetura prioriza boas práticas de desenvolvimento, facilitando manutenção, evolução contínua e colaboração em equipe.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Tvn69Fm9dg-7M6OXM5AsUaXOl-WOPawT
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Ideal para quem busca uma solução modular, extensível e orientada a resultados, com código organizado, documentação clara e pronta para integração com APIs externas, gateways de pagamento e serviços de autenticação. O projeto é adequado tanto para uso em produção quanto como base de estudos e aprimoramento técnico em ambientes corporativos.
