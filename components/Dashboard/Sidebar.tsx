@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, Shirt, PieChart, Sun, Moon, Shield } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, Shirt, PieChart, Sun, Moon, Shield, UserCircle } from 'lucide-react';
 import { Role } from '../../types';
 
 interface SidebarProps {
@@ -19,6 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLog
     { id: 'financial', label: 'Financeiro', icon: PieChart, allowed: [Role.ADMIN, Role.MANAGER] },
     { id: 'employees', label: 'Funcionários', icon: Users, allowed: [Role.ADMIN] },
     { id: 'permissions', label: 'Cargos e Permissões', icon: Shield, allowed: [Role.ADMIN] },
+    { id: 'profile', label: 'Meu Perfil', icon: UserCircle, allowed: [Role.ADMIN, Role.MANAGER, Role.SALES, Role.PRODUCTION] }, // Available to all
     { id: 'settings', label: 'Configurações', icon: Settings, allowed: [Role.ADMIN] },
   ];
 
@@ -34,15 +35,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLog
       <div className="flex-1 py-6 px-4 space-y-2">
         <p className="px-4 text-xs font-bold uppercase tracking-wider text-gray-600 mb-4">Menu Principal</p>
         {menuItems.map((item) => {
-          // Check if the user role is allowed. Since userRole might be a custom string, we check if it matches 'ADMIN' for restricted items 
-          // or if the item allows "ALL" (not implemented here, but keeping logic safe)
+          // Check if the user role is allowed.
+          const isAllowed = item.allowed.includes(userRole as Role) || (userRole === Role.ADMIN) || item.allowed.includes(Role.PRODUCTION); // Fallback: if allows production, allows basic users
           
-          // Simplified check: If the item allows the specific Role enum, we show it. 
-          // Custom roles usually won't have access to ADMIN features unless we map them, 
-          // but for this implementation, only the hardcoded ADMIN role sees admin features.
-          const isAllowed = item.allowed.includes(userRole as Role) || (userRole === Role.ADMIN);
+          // Re-verify specific role check logic if needed, but for 'profile' we want everyone.
+          // Since we passed 'allowed' array, we just check inclusion.
+          // For custom roles that aren't in the Enum directly (strings), we might need a fallback, 
+          // but usually 'profile' is universal. Let's ensure logic holds for custom roles.
           
-          if (!isAllowed) return null;
+          const hasAccess = item.allowed.includes(userRole as Role) || 
+                            (userRole === Role.ADMIN) || 
+                            (item.id === 'profile'); // Force allow profile
+
+          if (!hasAccess && !item.allowed.includes(userRole as Role)) return null;
           
           const isActive = currentView === item.id;
           return (

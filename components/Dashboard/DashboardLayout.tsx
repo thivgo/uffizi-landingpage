@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { User, Role, Order, Permission, ROLE_PERMISSIONS } from '../../types';
 import { MOCK_ORDERS, MONTHLY_DATA } from '../../constants';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Users, DollarSign, Package, TrendingUp, Search, Filter, Plus, Trash2, Shield, Sun, Moon, Lock, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Users, DollarSign, Package, TrendingUp, Search, Filter, Plus, Trash2, Shield, Sun, Moon, Lock, Check, X, ArrowUp, ArrowDown, UserCircle, Save, Camera, Pencil } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
@@ -13,6 +13,7 @@ interface DashboardLayoutProps {
   onLogout: () => void;
   users: User[];
   onAddUser: (user: Omit<User, 'id'>) => void;
+  onEditUser: (user: User) => void;
   onDeleteUser: (id: string) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
@@ -22,6 +23,7 @@ interface DashboardLayoutProps {
   onAddRole: (name: string) => void;
   onDeleteRole: (role: string) => void;
   onMoveRole: (role: string, direction: 'up' | 'down') => void;
+  onUpdateAvatar: (url: string) => void;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
@@ -29,6 +31,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onLogout,
   users,
   onAddUser,
+  onEditUser,
   onDeleteUser,
   isDarkMode,
   toggleTheme,
@@ -37,15 +40,22 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onUpdatePermission,
   onAddRole,
   onDeleteRole,
-  onMoveRole
+  onMoveRole,
+  onUpdateAvatar
 }) => {
   const [currentView, setCurrentView] = useState('overview');
   
   // Employee Form State
   const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: Role.PRODUCTION as string });
   
+  // Edit User State
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  
   // New Role Form State
   const [newRoleName, setNewRoleName] = useState('');
+
+  // Profile Avatar State
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar || '');
 
   // Use dynamic permissions if available, otherwise fallback (safety check)
   const currentPermissions = rolePermissions[user.role] || ROLE_PERMISSIONS[Role.PRODUCTION];
@@ -64,6 +74,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     }
   };
 
+  const handleSaveEditedUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingUser) {
+      onEditUser(editingUser);
+      setEditingUser(null);
+    }
+  };
+
   const handleCreateRole = (e: React.FormEvent) => {
     e.preventDefault();
     if(newRoleName.trim()) {
@@ -71,6 +89,26 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       setNewRoleName('');
     }
   };
+
+  const handleSaveAvatar = () => {
+    if(avatarUrl.trim()) {
+      onUpdateAvatar(avatarUrl);
+    }
+  };
+
+  // Mock Data for Profile Charts
+  const PERFORMANCE_DATA = [
+    { name: 'Concluído', value: 85, color: '#22c55e' }, // green
+    { name: 'Pendente', value: 15, color: '#e5e7eb' },  // gray
+  ];
+
+  const WEEKLY_ACTIVITY = [
+    { day: 'Seg', tasks: 12 },
+    { day: 'Ter', tasks: 19 },
+    { day: 'Qua', tasks: 15 },
+    { day: 'Qui', tasks: 22 },
+    { day: 'Sex', tasks: 18 },
+  ];
 
   const renderContent = () => {
     switch (currentView) {
@@ -228,7 +266,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           canEditProduction: 'Gerir Produção'
         };
 
-        // Use roleOrder from props instead of Object.keys
         const roles = roleOrder;
 
         return (
@@ -332,6 +369,129 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         );
 
+      case 'profile':
+        return (
+          <div className="space-y-8 animate-fadeIn">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Meu Perfil</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Profile Card */}
+              <div className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors flex flex-col items-center">
+                 <div className="relative group">
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name} 
+                      className="w-32 h-32 rounded-full object-cover ring-4 ring-gray-100 dark:ring-zinc-700 mb-4" 
+                    />
+                 </div>
+                 
+                 <h3 className="text-xl font-bold text-gray-800 dark:text-white">{user.name}</h3>
+                 <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
+                 <span className="mt-2 px-3 py-1 bg-brand-red/10 text-brand-red text-xs font-bold rounded-full uppercase">
+                   {user.role}
+                 </span>
+                 
+                 <div className="w-full mt-8">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alterar Foto (URL)</label>
+                    <div className="flex gap-2">
+                       <input 
+                         type="text" 
+                         value={avatarUrl}
+                         onChange={(e) => setAvatarUrl(e.target.value)}
+                         className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-gray-50 dark:bg-zinc-900 dark:text-white outline-none focus:border-brand-red"
+                         placeholder="https://..."
+                       />
+                       <Button size="sm" onClick={handleSaveAvatar}>
+                         <Save className="w-4 h-4" />
+                       </Button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2 text-center">Cole o link de uma imagem para atualizar seu avatar.</p>
+                 </div>
+              </div>
+
+              {/* Stats Card */}
+              <div className="lg:col-span-2 space-y-6">
+                 {/* Efficiency Gauge */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors flex flex-col items-center justify-center">
+                       <h4 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Aproveitamento Pessoal</h4>
+                       <div className="h-48 w-full flex items-center justify-center relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                             <PieChart>
+                                <Pie
+                                  data={PERFORMANCE_DATA}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={60}
+                                  outerRadius={80}
+                                  startAngle={180}
+                                  endAngle={0}
+                                  paddingAngle={5}
+                                  dataKey="value"
+                                >
+                                  {PERFORMANCE_DATA.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                  ))}
+                                </Pie>
+                             </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-2 text-center">
+                             <span className="text-3xl font-bold text-gray-800 dark:text-white">85%</span>
+                             <p className="text-xs text-gray-500">Eficiência</p>
+                          </div>
+                       </div>
+                       <p className="text-sm text-center text-gray-500 dark:text-gray-400 mt-[-20px]">Você está acima da média da equipe!</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors">
+                       <h4 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Atividade Semanal</h4>
+                       <div className="h-48 w-full">
+                         <ResponsiveContainer width="100%" height="100%">
+                           <BarChart data={WEEKLY_ACTIVITY}>
+                             <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: isDarkMode ? '#9ca3af' : '#6b7280'}} />
+                             <Tooltip 
+                                cursor={{fill: 'transparent'}}
+                                contentStyle={{
+                                  borderRadius: '8px', 
+                                  border: 'none', 
+                                  backgroundColor: isDarkMode ? '#1f2937' : '#fff',
+                                  color: isDarkMode ? '#fff' : '#000',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                }}
+                             />
+                             <Bar dataKey="tasks" fill="#C02626" radius={[4, 4, 4, 4]} barSize={30} />
+                           </BarChart>
+                         </ResponsiveContainer>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Goals List */}
+                 <div className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors">
+                    <h4 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Metas do Mês</h4>
+                    <div className="space-y-4">
+                       {[
+                         { title: 'Finalizar treinamento de segurança', progress: 100, color: 'bg-green-500' },
+                         { title: 'Atingir cota de produção semanal', progress: 75, color: 'bg-brand-red' },
+                         { title: 'Revisar relatórios pendentes', progress: 40, color: 'bg-yellow-500' }
+                       ].map((goal, idx) => (
+                         <div key={idx}>
+                            <div className="flex justify-between text-sm mb-1">
+                               <span className="text-gray-700 dark:text-gray-300 font-medium">{goal.title}</span>
+                               <span className="text-gray-500 dark:text-gray-400">{goal.progress}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 dark:bg-zinc-700 rounded-full h-2">
+                               <div className={`h-2 rounded-full ${goal.color}`} style={{ width: `${goal.progress}%` }}></div>
+                            </div>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case 'employees':
         if (!currentPermissions.canManageUsers) return <div className="p-10 text-center text-gray-500">Acesso negado.</div>;
         
@@ -391,14 +551,24 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
                   return (
                   <div key={u.id} className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 flex flex-col items-center text-center relative group transition-colors">
-                    {u.username !== 'admin' && (
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
-                        onClick={() => onDeleteUser(u.id)}
-                        className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                         onClick={() => setEditingUser(u)}
+                         className="text-gray-300 hover:text-blue-500 transition-colors"
+                         title="Editar Usuário"
+                       >
+                         <Pencil className="w-4 h-4" />
+                       </button>
+                      {u.username !== 'admin' && (
+                        <button 
+                          onClick={() => onDeleteUser(u.id)}
+                          className="text-gray-300 hover:text-red-500 transition-colors"
+                          title="Excluir Usuário"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                     
                     <img src={u.avatar} alt={u.name} className="w-20 h-20 rounded-full object-cover mb-4 ring-4 ring-gray-50 dark:ring-zinc-700" />
                     <h4 className="font-bold text-gray-800 dark:text-white">{u.name}</h4>
@@ -423,6 +593,54 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   </div>
                 )})}
              </div>
+
+             {/* Edit User Modal Overlay */}
+             {editingUser && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                 <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl max-w-md w-full animate-fadeIn border border-gray-100 dark:border-zinc-700">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-white">Editar Funcionário</h3>
+                      <button onClick={() => setEditingUser(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <X size={20} />
+                      </button>
+                    </div>
+                    
+                    <form onSubmit={handleSaveEditedUser} className="space-y-4">
+                      <Input 
+                        label="Nome Completo"
+                        value={editingUser.name}
+                        onChange={(e) => setEditingUser({...editingUser, name: e.target.value})}
+                        required
+                      />
+                      <Input 
+                        label="Usuário (Login)"
+                        value={editingUser.username}
+                        onChange={(e) => setEditingUser({...editingUser, username: e.target.value})}
+                        required
+                        disabled={editingUser.username === 'admin'} // Protect admin username
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
+                        <select 
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-brand-red outline-none bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
+                          value={editingUser.role}
+                          onChange={(e) => setEditingUser({...editingUser, role: e.target.value as Role})}
+                          disabled={editingUser.username === 'admin'} // Protect admin role
+                        >
+                          {roleOrder.map(role => (
+                            <option key={role} value={role}>{role}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="pt-4 flex gap-3">
+                        <Button type="button" variant="ghost" fullWidth onClick={() => setEditingUser(null)}>Cancelar</Button>
+                        <Button type="submit" fullWidth>Salvar Alterações</Button>
+                      </div>
+                    </form>
+                 </div>
+               </div>
+             )}
           </div>
         );
 

@@ -68,8 +68,30 @@ function App() {
     setUsers([...users, newUser]);
   };
 
+  const handleEditUser = (updatedUser: User) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
+    
+    // If the user is editing themselves, update the current session to reflect changes immediately
+    if (currentUser && currentUser.id === updatedUser.id) {
+      setCurrentUser(prev => ({ ...prev!, ...updatedUser }));
+    }
+  };
+
   const handleDeleteUser = (id: string) => {
     setUsers(users.filter(u => u.id !== id));
+  };
+
+  // User Profile Handler
+  const handleUpdateAvatar = (newUrl: string) => {
+    if (!currentUser) return;
+
+    const updatedUser = { ...currentUser, avatar: newUrl };
+    
+    // Update current session
+    setCurrentUser(updatedUser);
+    
+    // Update "Database"
+    setUsers(prevUsers => prevUsers.map(u => u.id === currentUser.id ? updatedUser : u));
   };
 
   // Permission & Role Handlers
@@ -114,9 +136,6 @@ function App() {
 
     // 2. Remove from order
     setRoleOrder(prev => prev.filter(r => r !== roleToDelete));
-
-    // 3. (Optional) Reset users who had this role to a default or leave them hanging
-    // For this demo, we'll leave them, the dashboard handles unknown roles gracefully via fallback
   };
 
   const handleMoveRole = (role: string, direction: 'up' | 'down') => {
@@ -152,6 +171,7 @@ function App() {
           onLogout={handleLogout}
           users={users}
           onAddUser={handleAddUser}
+          onEditUser={handleEditUser}
           onDeleteUser={handleDeleteUser}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
@@ -161,6 +181,7 @@ function App() {
           onAddRole={handleAddRole}
           onDeleteRole={handleDeleteRole}
           onMoveRole={handleMoveRole}
+          onUpdateAvatar={handleUpdateAvatar}
         />
       )}
 
