@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar';
 import { User, Role, Order, Permission, ROLE_PERMISSIONS } from '../../types';
 import { MOCK_ORDERS, MONTHLY_DATA } from '../../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Users, DollarSign, Package, TrendingUp, Search, Filter, Plus, Trash2, Shield, Sun, Moon } from 'lucide-react';
+import { Users, DollarSign, Package, TrendingUp, Search, Filter, Plus, Trash2, Shield, Sun, Moon, Lock, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
@@ -16,6 +16,12 @@ interface DashboardLayoutProps {
   onDeleteUser: (id: string) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  rolePermissions: Record<string, Permission>;
+  roleOrder: string[];
+  onUpdatePermission: (role: string, permissionKey: keyof Permission, value: boolean) => void;
+  onAddRole: (name: string) => void;
+  onDeleteRole: (role: string) => void;
+  onMoveRole: (role: string, direction: 'up' | 'down') => void;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
@@ -25,14 +31,24 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onAddUser,
   onDeleteUser,
   isDarkMode,
-  toggleTheme
+  toggleTheme,
+  rolePermissions,
+  roleOrder,
+  onUpdatePermission,
+  onAddRole,
+  onDeleteRole,
+  onMoveRole
 }) => {
   const [currentView, setCurrentView] = useState('overview');
   
   // Employee Form State
-  const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: Role.PRODUCTION });
+  const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: Role.PRODUCTION as string });
+  
+  // New Role Form State
+  const [newRoleName, setNewRoleName] = useState('');
 
-  const permissions: Permission = ROLE_PERMISSIONS[user.role];
+  // Use dynamic permissions if available, otherwise fallback (safety check)
+  const currentPermissions = rolePermissions[user.role] || ROLE_PERMISSIONS[Role.PRODUCTION];
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +56,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
        onAddUser({
          name: newUser.name,
          username: newUser.username,
-         role: newUser.role,
+         role: newUser.role as Role,
          avatar: `https://picsum.photos/seed/${newUser.username}/200`
        });
-       setNewUser({ name: '', username: '', password: '', role: Role.PRODUCTION });
+       // Reset form
+       setNewUser({ name: '', username: '', password: '', role: roleOrder[0] || Role.PRODUCTION });
+    }
+  };
+
+  const handleCreateRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    if(newRoleName.trim()) {
+      onAddRole(newRoleName.toUpperCase());
+      setNewRoleName('');
     }
   };
 
@@ -135,7 +160,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Gerenciamento de Pedidos</h2>
-              {permissions.canEditOrders && <Button><Plus className="w-4 h-4 mr-2" /> Novo Pedido</Button>}
+              {currentPermissions.canEditOrders && <Button><Plus className="w-4 h-4 mr-2" /> Novo Pedido</Button>}
             </div>
 
             <div className="bg-white dark:bg-zinc-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors">
@@ -193,8 +218,122 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         );
 
+      case 'permissions':
+        if (user.role !== Role.ADMIN) return <div className="p-10 text-center text-gray-500">Acesso negado.</div>;
+
+        const permissionLabels = {
+          canManageUsers: 'Gerenciar Usuários',
+          canEditOrders: 'Editar Pedidos',
+          canViewFinancials: 'Ver Financeiro',
+          canEditProduction: 'Gerir Produção'
+        };
+
+        // Use roleOrder from props instead of Object.keys
+        const roles = roleOrder;
+
+        return (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Matriz de Permissões</h2>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Controle de Acesso por Cargo</h3>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b-2 border-gray-100 dark:border-zinc-700">
+                      <th className="pb-4 pr-4 text-gray-500 dark:text-gray-400 font-medium w-1/4">Cargo / Função</th>
+                      {Object.values(permissionLabels).map(label => (
+                        <th key={label} className="pb-4 px-4 text-center text-gray-500 dark:text-gray-400 font-medium">{label}</th>
+                      ))}
+                      <th className="pb-4 px-4 text-center text-gray-500 dark:text-gray-400 font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roles.map((roleKey, index) => (
+                      <tr key={roleKey} className="border-b border-gray-50 dark:border-zinc-700/50 hover:bg-gray-50 dark:hover:bg-zinc-700/30 transition-colors">
+                        <td className="py-4 pr-4">
+                          <span className="font-bold text-gray-800 dark:text-white px-3 py-1 bg-gray-100 dark:bg-zinc-700 rounded-lg text-sm">
+                            {roleKey}
+                          </span>
+                        </td>
+                        {Object.keys(permissionLabels).map((permKey) => {
+                          const isAllowed = rolePermissions[roleKey]?.[permKey as keyof Permission] || false;
+                          return (
+                            <td key={permKey} className="py-4 px-4 text-center">
+                              <button 
+                                onClick={() => onUpdatePermission(roleKey, permKey as keyof Permission, !isAllowed)}
+                                className={`w-10 h-6 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-red ${
+                                  isAllowed ? 'bg-brand-red' : 'bg-gray-300 dark:bg-zinc-600'
+                                }`}
+                              >
+                                <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform transform shadow-sm ${
+                                  isAllowed ? 'translate-x-4' : 'translate-x-0'
+                                }`}></span>
+                              </button>
+                            </td>
+                          );
+                        })}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                             <button 
+                               onClick={() => onMoveRole(roleKey, 'up')}
+                               disabled={index === 0}
+                               className="p-1.5 text-gray-400 hover:text-brand-red hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                               title="Mover para cima"
+                             >
+                               <ArrowUp size={16} />
+                             </button>
+                             <button 
+                               onClick={() => onMoveRole(roleKey, 'down')}
+                               disabled={index === roles.length - 1}
+                               className="p-1.5 text-gray-400 hover:text-brand-red hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                               title="Mover para baixo"
+                             >
+                               <ArrowDown size={16} />
+                             </button>
+                             <div className="w-px h-4 bg-gray-200 dark:bg-zinc-700 mx-1"></div>
+                             <button 
+                               onClick={() => onDeleteRole(roleKey)}
+                               disabled={roleKey === Role.ADMIN}
+                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                               title="Excluir cargo"
+                             >
+                               <Trash2 size={16} />
+                             </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Create New Role */}
+            <div className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 transition-colors">
+               <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                 <Shield className="w-5 h-5 text-brand-red" /> Criar Novo Cargo
+               </h3>
+               <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Adicione um novo cargo ao sistema. As permissões começam desabilitadas por padrão.</p>
+               
+               <form onSubmit={handleCreateRole} className="flex gap-4 items-end max-w-lg">
+                  <Input 
+                    placeholder="Nome do Cargo (ex: SUPERVISOR)" 
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName((e.target as HTMLInputElement).value)}
+                    required
+                  />
+                  <Button type="submit">Adicionar Cargo</Button>
+               </form>
+            </div>
+          </div>
+        );
+
       case 'employees':
-        if (!permissions.canManageUsers) return <div className="p-10 text-center text-gray-500">Acesso negado.</div>;
+        if (!currentPermissions.canManageUsers) return <div className="p-10 text-center text-gray-500">Acesso negado.</div>;
         
         return (
           <div className="space-y-8 animate-fadeIn">
@@ -228,15 +367,16 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     required
                   />
                   <div className="w-full">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
                     <select 
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-brand-red outline-none bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
                       value={newUser.role}
-                      onChange={(e) => setNewUser({...newUser, role: (e.target as HTMLSelectElement).value as Role})}
+                      onChange={(e) => setNewUser({...newUser, role: (e.target as HTMLSelectElement).value})}
                     >
-                      <option value={Role.ADMIN}>Administrador</option>
-                      <option value={Role.MANAGER}>Gerente</option>
-                      <option value={Role.SALES}>Vendas</option>
-                      <option value={Role.PRODUCTION}>Produção</option>
+                      {/* Use roleOrder to populate the dropdown in the desired order */}
+                      {roleOrder.map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
                     </select>
                   </div>
                   <Button type="submit">Criar Conta</Button>
@@ -245,7 +385,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
              {/* Users List */}
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {users.map((u) => (
+                {users.map((u) => {
+                  const userPerms = rolePermissions[u.role] || { canManageUsers: false, canEditOrders: false, canViewFinancials: false, canEditProduction: false };
+                  const activePermCount = Object.values(userPerms).filter(Boolean).length;
+
+                  return (
                   <div key={u.id} className="bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-700 flex flex-col items-center text-center relative group transition-colors">
                     {u.username !== 'admin' && (
                       <button 
@@ -262,7 +406,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
                       ${u.role === Role.ADMIN ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                         u.role === Role.MANAGER ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                        u.role === Role.SALES ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                        u.role === Role.SALES ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
+                        u.role === Role.PRODUCTION ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' : 
+                        'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
                       }
                     `}>
                       {u.role}
@@ -271,11 +417,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <div className="mt-6 pt-6 border-t border-gray-100 dark:border-zinc-700 w-full">
                        <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
                          <Shield className="w-3 h-3" />
-                         <span>{Object.values(ROLE_PERMISSIONS[u.role]).filter(Boolean).length} Permissões Ativas</span>
+                         <span>{activePermCount} Permissões Ativas</span>
                        </div>
                     </div>
                   </div>
-                ))}
+                )})}
              </div>
           </div>
         );

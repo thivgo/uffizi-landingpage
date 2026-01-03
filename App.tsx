@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { DashboardLayout } from './components/Dashboard/DashboardLayout';
 import { LoginModal } from './components/LoginModal';
-import { ViewState, User, Role } from './types';
+import { ViewState, User, Role, ROLE_PERMISSIONS, Permission } from './types';
 import { INITIAL_USERS } from './constants';
 
 function App() {
@@ -14,6 +14,11 @@ function App() {
   
   // App Data State (Simulating Database)
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  
+  // Permissions State
+  const [rolePermissions, setRolePermissions] = useState<Record<string, Permission>>(ROLE_PERMISSIONS);
+  // Order State to handle sorting
+  const [roleOrder, setRoleOrder] = useState<string[]>(Object.keys(ROLE_PERMISSIONS));
 
   // Theme Handler
   useEffect(() => {
@@ -28,7 +33,6 @@ function App() {
 
   // Auth Handler
   const handleLogin = (username: string, password: string): boolean => {
-    // Special check for hardcoded admin requirement from prompt
     if (username === 'admin' && password === 'admin') {
       const adminUser = users.find(u => u.username === 'admin');
       if (adminUser) {
@@ -68,6 +72,70 @@ function App() {
     setUsers(users.filter(u => u.id !== id));
   };
 
+  // Permission & Role Handlers
+  const handleUpdatePermission = (role: string, permissionKey: keyof Permission, value: boolean) => {
+    setRolePermissions(prev => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [permissionKey]: value
+      }
+    }));
+  };
+
+  const handleAddRole = (newRoleName: string) => {
+    if (rolePermissions[newRoleName]) return; // Prevent duplicates
+    
+    // Add to permissions object
+    setRolePermissions(prev => ({
+      ...prev,
+      [newRoleName]: {
+        canManageUsers: false,
+        canEditOrders: false,
+        canViewFinancials: false,
+        canEditProduction: false
+      }
+    }));
+    // Add to order array
+    setRoleOrder(prev => [...prev, newRoleName]);
+  };
+
+  const handleDeleteRole = (roleToDelete: string) => {
+    // Prevent deleting the main ADMIN role to avoid lockout
+    if (roleToDelete === Role.ADMIN) {
+      alert("O cargo de Administrador não pode ser excluído.");
+      return;
+    }
+
+    // 1. Remove from permissions
+    const newPermissions = { ...rolePermissions };
+    delete newPermissions[roleToDelete];
+    setRolePermissions(newPermissions);
+
+    // 2. Remove from order
+    setRoleOrder(prev => prev.filter(r => r !== roleToDelete));
+
+    // 3. (Optional) Reset users who had this role to a default or leave them hanging
+    // For this demo, we'll leave them, the dashboard handles unknown roles gracefully via fallback
+  };
+
+  const handleMoveRole = (role: string, direction: 'up' | 'down') => {
+    const index = roleOrder.indexOf(role);
+    if (index < 0) return;
+    
+    // Boundary checks
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === roleOrder.length - 1) return;
+
+    const newOrder = [...roleOrder];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap elements
+    [newOrder[index], newOrder[swapIndex]] = [newOrder[swapIndex], newOrder[index]];
+    
+    setRoleOrder(newOrder);
+  };
+
   return (
     <div className="antialiased text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {view === 'LANDING' && (
@@ -87,6 +155,12 @@ function App() {
           onDeleteUser={handleDeleteUser}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
+          rolePermissions={rolePermissions}
+          roleOrder={roleOrder}
+          onUpdatePermission={handleUpdatePermission}
+          onAddRole={handleAddRole}
+          onDeleteRole={handleDeleteRole}
+          onMoveRole={handleMoveRole}
         />
       )}
 
