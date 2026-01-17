@@ -32,18 +32,3 @@ O projeto foi construído focando em performance e compatibilidade:
 * **CSS3:** Estilização alinhada à identidade visual da marca (cores institucionais, tipografia sóbria).
 * **JavaScript:** Interações de menu e possíveis validações de formulário.
 * **Git & GitHub:** Versionamento do código.
-
----
-
-## 📸 Layout do Projeto
-
-| Desktop | Mobile |
-|:---:|:---:|
-| *(Coloque o link do print aqui - Ex: Home com o banner da fábrica)* | *(Coloque o link do print aqui - Ex: Menu mobile)* |
-
----
-
-## 🚀 Como Visualizar
-
-### Acesso Online
-Você
